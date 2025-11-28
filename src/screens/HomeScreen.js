@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions, Platform, KeyboardAvoidingView, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { collection, addDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { getDirections } from '../services/directions';
 import { checkMatch } from '../services/matching';
 import MapComponent from '../components/MapComponent';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 const { height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-    const [role, setRole] = useState('rider'); // 'rider' or 'driver'
+    const [role, setRole] = useState('rider');
     const [originText, setOriginText] = useState('');
     const [destText, setDestText] = useState('');
     const [originCoords, setOriginCoords] = useState(null);
@@ -38,7 +38,6 @@ const HomeScreen = ({ navigation }) => {
         })();
     }, []);
 
-    // Listen for matches
     useEffect(() => {
         if (!myTripId || !route) return;
 
@@ -143,7 +142,7 @@ const HomeScreen = ({ navigation }) => {
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.bottomSheetWrapper}
             >
-                <ScrollView style={styles.bottomSheet} contentContainerStyle={{ paddingBottom: 40 }}>
+                <ScrollView style={styles.bottomSheet} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
                     <View style={styles.dragHandle} />
 
                     <View style={styles.toggleContainer}>
@@ -151,12 +150,14 @@ const HomeScreen = ({ navigation }) => {
                             style={[styles.toggleButton, role === 'rider' && styles.activeToggle]}
                             onPress={() => setRole('rider')}
                         >
+                            <Ionicons name="person" size={16} color={role === 'rider' ? 'black' : '#666'} style={{ marginRight: 5 }} />
                             <Text style={[styles.toggleText, role === 'rider' && styles.activeToggleText]}>Rider</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.toggleButton, role === 'driver' && styles.activeToggle]}
                             onPress={() => setRole('driver')}
                         >
+                            <Ionicons name="car" size={18} color={role === 'driver' ? 'black' : '#666'} style={{ marginRight: 5 }} />
                             <Text style={[styles.toggleText, role === 'driver' && styles.activeToggleText]}>Driver</Text>
                         </TouchableOpacity>
                     </View>
@@ -171,6 +172,11 @@ const HomeScreen = ({ navigation }) => {
                                 onChangeText={setOriginText}
                                 placeholderTextColor="#666"
                             />
+                            {originText.length > 0 && (
+                                <TouchableOpacity onPress={() => setOriginText('')}>
+                                    <Ionicons name="close-circle" size={18} color="#ccc" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                         <View style={styles.connectorLine} />
                         <View style={styles.inputWrapper}>
@@ -182,6 +188,11 @@ const HomeScreen = ({ navigation }) => {
                                 onChangeText={setDestText}
                                 placeholderTextColor="#666"
                             />
+                            {destText.length > 0 && (
+                                <TouchableOpacity onPress={() => setDestText('')}>
+                                    <Ionicons name="close-circle" size={18} color="#ccc" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
 
@@ -191,7 +202,7 @@ const HomeScreen = ({ navigation }) => {
                             onPress={handleGetRoute}
                             disabled={loading || !originText || !destText}
                         >
-                            <Text style={styles.primaryButtonText}>{loading ? "Loading..." : "Preview Route"}</Text>
+                            <Text style={styles.primaryButtonText}>{loading ? "Calculating..." : "Preview Route"}</Text>
                         </TouchableOpacity>
 
                         {route && !myTripId && (
@@ -203,6 +214,14 @@ const HomeScreen = ({ navigation }) => {
                                 <Text style={styles.secondaryButtonText}>Confirm Trip</Text>
                             </TouchableOpacity>
                         )}
+
+                        {/* Debug Button */}
+                        <TouchableOpacity
+                            style={[styles.secondaryButton, { backgroundColor: '#444', marginTop: 10 }]}
+                            onPress={() => navigation.navigate('Chat', { tripId: 'debug_trip', myId: 'debug_me' })}
+                        >
+                            <Text style={styles.secondaryButtonText}>Test Chat UI</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {matches.length > 0 && (
@@ -210,15 +229,23 @@ const HomeScreen = ({ navigation }) => {
                             <Text style={styles.sectionTitle}>Available Rides</Text>
                             {matches.map((match) => (
                                 <View key={match.id} style={styles.matchCard}>
-                                    <View>
-                                        <Text style={styles.matchRole}>{match.role === 'driver' ? 'Driver' : 'Rider'}</Text>
-                                        <Text style={styles.matchInfo}>{(match.overlap * 100).toFixed(0)}% Route Match</Text>
+                                    <View style={styles.matchHeader}>
+                                        <View style={styles.avatarPlaceholder}>
+                                            <Ionicons name="person" size={20} color="white" />
+                                        </View>
+                                        <View style={styles.matchDetails}>
+                                            <Text style={styles.matchRole}>{match.role === 'driver' ? 'Driver' : 'Rider'}</Text>
+                                            <View style={styles.matchMeta}>
+                                                <Ionicons name="git-branch-outline" size={14} color="#666" />
+                                                <Text style={styles.matchInfo}> {(match.overlap * 100).toFixed(0)}% Match</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                     <TouchableOpacity
                                         style={styles.chatButton}
                                         onPress={() => navigation.navigate('Chat', { tripId: match.id, myId: myTripId })}
                                     >
-                                        <Text style={styles.chatButtonText}>Chat</Text>
+                                        <Ionicons name="chatbubble-ellipses-outline" size={20} color="black" />
                                     </TouchableOpacity>
                                 </View>
                             ))}
@@ -240,7 +267,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        maxHeight: height * 0.6,
+        maxHeight: height * 0.65,
     },
     bottomSheet: {
         backgroundColor: 'white',
@@ -250,11 +277,11 @@ const styles = StyleSheet.create({
         shadowColor: "#000",
         shadowOffset: {
             width: 0,
-            height: -2,
+            height: -4,
         },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.15,
         shadowRadius: 10,
-        elevation: 10,
+        elevation: 20,
     },
     dragHandle: {
         width: 40,
@@ -267,27 +294,30 @@ const styles = StyleSheet.create({
     toggleContainer: {
         flexDirection: 'row',
         backgroundColor: '#f3f3f3',
-        borderRadius: 8,
+        borderRadius: 12,
         padding: 4,
         marginBottom: 20,
     },
     toggleButton: {
         flex: 1,
-        paddingVertical: 8,
+        flexDirection: 'row',
+        paddingVertical: 10,
         alignItems: 'center',
-        borderRadius: 6,
+        justifyContent: 'center',
+        borderRadius: 10,
     },
     activeToggle: {
         backgroundColor: 'white',
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowRadius: 4,
         elevation: 2,
     },
     toggleText: {
         fontWeight: '600',
         color: '#666',
+        fontSize: 15,
     },
     activeToggleText: {
         color: 'black',
@@ -299,15 +329,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#f9f9f9',
-        borderRadius: 8,
+        borderRadius: 12,
         paddingHorizontal: 15,
-        height: 50,
+        height: 54,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
     },
     input: {
         flex: 1,
-        marginLeft: 10,
+        marginLeft: 12,
         fontSize: 16,
         color: 'black',
+        fontWeight: '500',
     },
     dot: {
         width: 8,
@@ -320,22 +353,29 @@ const styles = StyleSheet.create({
     },
     connectorLine: {
         width: 2,
-        height: 10,
+        height: 12,
         backgroundColor: '#ddd',
-        marginLeft: 18, // Align with dot/square center
-        marginVertical: 2,
+        marginLeft: 18,
+        marginVertical: 4,
     },
     actionButtons: {
-        gap: 10,
+        gap: 12,
     },
     primaryButton: {
         backgroundColor: 'black',
-        paddingVertical: 16,
-        borderRadius: 8,
+        paddingVertical: 18,
+        borderRadius: 12,
         alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     disabledButton: {
         backgroundColor: '#ccc',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     primaryButtonText: {
         color: 'white',
@@ -343,9 +383,9 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     secondaryButton: {
-        backgroundColor: '#276EF1', // Uber Blue
-        paddingVertical: 16,
-        borderRadius: 8,
+        backgroundColor: '#276EF1',
+        paddingVertical: 18,
+        borderRadius: 12,
         alignItems: 'center',
     },
     secondaryButtonText: {
@@ -354,49 +394,67 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     matchesSection: {
-        marginTop: 25,
+        marginTop: 30,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 15,
-        color: '#333',
+        color: '#1a1a1a',
     },
     matchCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 15,
+        padding: 16,
         backgroundColor: 'white',
-        borderRadius: 12,
-        marginBottom: 10,
+        borderRadius: 16,
+        marginBottom: 12,
         borderWidth: 1,
         borderColor: '#f0f0f0',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 2,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    matchHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatarPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#ccc',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    matchDetails: {
+        justifyContent: 'center',
     },
     matchRole: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: 'black',
+        color: '#1a1a1a',
+    },
+    matchMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
     },
     matchInfo: {
         fontSize: 14,
         color: '#666',
-        marginTop: 4,
     },
     chatButton: {
-        backgroundColor: '#eee',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    chatButtonText: {
-        fontWeight: '600',
-        color: 'black',
+        backgroundColor: '#f3f3f3',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

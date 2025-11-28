@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GiftedChat } from 'react-native-gifted-chat';
+import { GiftedChat, Bubble, Send } from 'react-native-gifted-chat';
 import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-const ChatScreen = ({ route }) => {
+const ChatScreen = ({ route, navigation }) => {
     const { tripId, myId } = route.params;
     const [messages, setMessages] = useState([]);
 
-    // Create a unique chat ID based on the two trip IDs (sorted to ensure consistency)
     const chatId = [tripId, myId].sort().join('_');
 
     useEffect(() => {
@@ -44,15 +44,69 @@ const ChatScreen = ({ route }) => {
         });
     }, [chatId]);
 
+    const renderBubble = (props) => {
+        return (
+            <Bubble
+                {...props}
+                wrapperStyle={{
+                    right: {
+                        backgroundColor: '#276EF1', // Uber Blue
+                    },
+                    left: {
+                        backgroundColor: '#f0f0f0',
+                    },
+                }}
+                textStyle={{
+                    right: {
+                        color: '#fff',
+                    },
+                    left: {
+                        color: '#000',
+                    },
+                }}
+            />
+        );
+    };
+
+    const renderSend = (props) => {
+        return (
+            <Send {...props}>
+                <View style={styles.sendingContainer}>
+                    <Ionicons name="send" size={24} color="#276EF1" />
+                </View>
+            </Send>
+        );
+    };
+
     return (
-        <GiftedChat
-            messages={messages}
-            onSend={messages => onSend(messages)}
-            user={{
-                _id: myId, // Use my trip ID as user ID
-            }}
-        />
+        <SafeAreaView style={styles.container}>
+            <GiftedChat
+                messages={messages}
+                onSend={messages => onSend(messages)}
+                user={{
+                    _id: myId,
+                }}
+                renderBubble={renderBubble}
+                renderSend={renderSend}
+                alwaysShowSend
+                scrollToBottom
+                placeholder="Type a message..."
+            />
+        </SafeAreaView>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    sendingContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+        marginBottom: 10,
+    }
+});
 
 export default ChatScreen;
